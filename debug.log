@@ -1,0 +1,27 @@
+fromAll().
+   when({
+        $any : function(s,e) {
+            if (e.eventType && !e.eventType.startsWith('$'))
+                linkTo('allEvent', e);
+   }});
+
+fromCategory('User')
+.foreachStream()
+.when({
+    $init: function(){
+        return {
+            version:-1
+        }
+    },
+    UserCreated: function(s,e){
+        s.id = e.data.id;
+        s.user_name= e.data.user_name;
+        s.password=e.data.password;
+        s.version=s.version+1;
+    }
+})
+
+kubectl label ns/event-example knative-eventing-injection=enabled
+kubectl --namespace event-example get Broker default
+
+curl -i -u admin:changeit -d "@event.json" "http://111.231.212.12:2113/streams/newstream" -H "Content-Type:application/vnd.eventstore.events+json"

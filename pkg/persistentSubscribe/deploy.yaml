@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eventstore
+  namespace: default
+  labels:
+    app: eventstore
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: eventstore
+      labels:
+        app: eventstore
+    spec:
+      containers:
+        - name: eventstore
+          image: eventstore/eventstore:latest
+          ports:
+            - containerPort: 1112
+            - containerPort: 1113
+            - containerPort: 2112
+            - containerPort: 2113
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: eventstore
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eventstore
+  namespace: default
+spec:
+  selector:
+    app: eventstore
+  ports:
+    - port: 1112
+      name: "1112"
+    - port: 1113
+      name: "1113"
+    - port: 2112
+      name: "2112"
+    - port: 2113
+      name: "2113"
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redirect
+  namespace: default
+  labels:
+    app: redirect
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: redirect
+      labels:
+        app: redirect
+    spec:
+      containers:
+        - name: redirect
+          image: ccr.ccs.tencentyun.com/k8s-test/auth:event-redirect-v3
+          env:
+            - name: EVENT_HOST
+              value: "tcp://admin:changeit@eventstore:1113"
+            - name: REDIRECT_URL
+              value: "http://default-broker.default.svc.cluster.local"
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: redirect
+---
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: hello-display
+  namespaces: default
+spec:
+  filter:
+    attributes:
+      type: event-type
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: event-display
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-display
+  namespace: default
+  labels:
+    app: event-display
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: event-display
+      labels:
+        app: event-display
+    spec:
+      containers:
+        - name: event-display
+          image: gcr.azk8s.cn/knative-releases/github.com/knative/eventing-sources/cmd/event_display
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: event-display
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: event-display
+  namespace: default
+spec:
+  selector:
+    app: event-display
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080

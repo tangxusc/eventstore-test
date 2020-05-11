@@ -1,0 +1,28 @@
+POST http://localhost:8090/createUser
+Content-Type: application/json
+
+{
+  "name": "张三"
+}
+
+###
+GET http://localhost:8090/user/a9315235-af58-4744-ac19-b87787ed8eb2/profile
+Accept: application/json
+
+###
+POST http://localhost:8090/enableUser
+Content-Type: application/json
+
+{
+  "id": "a9315235-af58-4744-ac19-b87787ed8eb2"
+}
+
+###
+POST http://localhost:8090/disableUser
+Content-Type: application/json
+
+{
+  "id": "a9315235-af58-4744-ac19-b87787ed8eb2"
+}
+
+###
